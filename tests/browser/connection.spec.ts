@@ -60,6 +60,13 @@ test('login, dados reais parciais, erro sem fallback, troca de período e saída
   await expect(page.getByRole('alert')).toContainText('O Maxiprod recusou o acesso.');
   await expect(page.locator('tbody')).toHaveCount(0);
   await expect(page.getByText('Modo demonstração')).toHaveCount(0);
+  await page.route('**/api/connection-check', route => {
+    expect(route.request().method()).toEqual('POST');
+    return route.fulfill({ json: { reference: 'MP-CHECK-ACCESS-UNCONFIRMED', summary: 'Não foi possível confirmar o acesso.', action: 'Envie este diagnóstico.', steps: [{ key: 'basic', label: 'Consulta mínima de empresas', ok: false, note: 'O serviço retornou erro sem informar a causa.' }] } });
+  });
+  await page.getByRole('button', { name: 'Verificar conexão', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Diagnóstico da conexão' })).toContainText('MP-CHECK-ACCESS-UNCONFIRMED');
+  await expect(page.getByRole('region', { name: 'Diagnóstico da conexão' })).toContainText('Falhou · Consulta mínima de empresas');
   fail = false;
   await page.getByRole('button', { name: 'Tentar novamente' }).click();
   await expect(page.locator('tbody tr')).toHaveCount(1);

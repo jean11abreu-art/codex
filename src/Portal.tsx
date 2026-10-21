@@ -3,6 +3,7 @@ import App from './App';
 import { PremiumFlexLogo, BrazilFlag } from './Brand';
 import { api, type Company, type LiveData, type Range } from './connection';
 import { dateKey, monthRange } from './finance.mjs';
+type CheckReport = { reference: string; summary: string; action: string; steps: { key: string; label: string; ok: boolean; note: string }[] };
 
 export default function Portal() {
   const [view, setView] = useState<'demo' | 'login' | 'loading' | 'live' | 'error' | 'companies'>('demo');
@@ -14,8 +15,17 @@ export default function Portal() {
   const [company, setCompany] = useState('');
   const [range, setRange] = useState<Range>(() => monthRange(new Date()));
   const [period, setPeriod] = useState<'day' | 'month' | 'year' | 'custom'>('month');
+  const [checking, setChecking] = useState(false);
+  const [report, setReport] = useState<CheckReport | null>(null);
+  const [checkError, setCheckError] = useState('');
+  async function diagnose() {
+    setChecking(true); setReport(null); setCheckError('');
+    try { setReport(await api('/api/connection-check', { method: 'POST' })); }
+    catch (cause) { setCheckError(cause instanceof Error ? cause.message : 'Não foi possível verificar a conexão.'); }
+    finally { setChecking(false); }
+  }
   async function load(nextRange = range, nextCompany = company) {
-    setView('loading'); setData(null); setError('');
+    setView('loading'); setData(null); setError(''); setReport(null); setCheckError('');
     try {
       const params = new URLSearchParams({ ...nextRange });
       if (nextCompany) params.set('company', nextCompany);
@@ -61,6 +71,7 @@ export default function Portal() {
     {view === 'companies' && (companies.length ? <label className="balance-label">Empresa<select aria-label="Selecionar empresa" value="" onChange={event => { setCompany(event.target.value); void load(range, event.target.value); }}><option value="" disabled>Escolha uma empresa</option>{companies.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : <p>Este token não disponibilizou nenhuma empresa própria. Confira suas permissões no Maxiprod.</p>)}
     {view === 'loading' && <p role="status">Buscando todas as páginas dos lançamentos. Nenhum dado de demonstração será usado nesta consulta.</p>}
     {view === 'error' && <button className="button primary full-width" onClick={connect}>Tentar novamente</button>}
+    {view === 'error' && <><button className="button full-width" disabled={checking} onClick={diagnose}>{checking ? 'Verificando conexão…' : 'Verificar conexão'}</button>{checking && <p role="status">Testando consultas pequenas pelo servidor…</p>}{checkError && <p role="alert" className="form-error">{checkError}</p>}{report && <section className="connection-report" aria-label="Diagnóstico da conexão"><h2>Diagnóstico da conexão</h2><p><strong>{report.summary}</strong></p><ul>{report.steps.map(step => <li key={step.key}><strong>{step.ok ? '✓ Funcionou' : '✕ Falhou'} · {step.label}</strong><span>{step.note}</span></li>)}</ul><p>{report.action}</p><p><strong>Referência: {report.reference}</strong></p></section>}</>}
     {view !== 'loading' && <button className="button full-width" onClick={() => { setPassword(''); setData(null); setError(''); setView('demo'); }}>Voltar à demonstração</button>}
     <small>Data de referência: {dateKey(new Date())} · Chave da API protegida no servidor</small>
   </section></main>;
