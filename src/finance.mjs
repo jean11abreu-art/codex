@@ -11,7 +11,11 @@ export function inRange(items, start, end) {
 }
 
 export function total(items, direction, status) {
-  return items.filter(item => (!direction || item.direction === direction) && (!status || item.status === status)).reduce((sum, item) => sum + item.amountCents, 0);
+  return items.filter(item => !direction || item.direction === direction).reduce((sum, item) => {
+    if (status === 'pending' && item.outstandingCents !== undefined) return sum + item.outstandingCents;
+    if (status === 'paid' && item.paidCents !== undefined) return sum + item.paidCents;
+    return sum + (!status || item.status === status ? item.amountCents : 0);
+  }, 0);
 }
 
 export function actualBalance(items, openingCents, today) {
@@ -45,6 +49,8 @@ export function aggregate(items, start, end, mode) {
 
 export function csv(items) {
   const escape = value => `"${String(value).replace(/^\s*[=+@\-]/, "'$&").replaceAll('"', '""')}"`;
-  const rows = [['Descrição', 'Tipo', 'Categoria', 'Vencimento', 'Situação', 'Valor (R$)'], ...items.map(item => [item.description, item.direction === 'in' ? 'Receber' : 'Pagar', item.category, item.dueDate, item.status === 'paid' ? 'Liquidado' : 'Em aberto', (item.amountCents / 100).toFixed(2).replace('.', ',')])];
+  const real = items.some(item => item.outstandingCents !== undefined);
+  const amount = value => (value / 100).toFixed(2).replace('.', ',');
+  const rows = [['Descrição', 'Tipo', 'Categoria', 'Vencimento', 'Situação', 'Valor (R$)', ...(real ? ['Em aberto (R$)', 'Liquidado líquido (R$)'] : [])], ...items.map(item => [item.description, item.direction === 'in' ? 'Receber' : 'Pagar', item.category, item.dueDate, item.status === 'paid' ? 'Liquidado' : item.paidCents > 0 ? 'Parcial' : 'Em aberto', amount(item.amountCents), ...(real ? [amount(item.outstandingCents || 0), amount(item.paidCents || 0)] : [])])];
   return '\uFEFF' + rows.map(row => row.map(escape).join(';')).join('\r\n');
 }

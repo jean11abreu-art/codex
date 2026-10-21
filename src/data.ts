@@ -11,6 +11,9 @@ export type Entry = {
   settledDate?: string;
   status: 'paid' | 'pending';
   boleto: boolean;
+  accountId?: string | null;
+  outstandingCents?: number;
+  paidCents?: number;
 };
 
 export const OPENING_BALANCE_CENTS = 8250000;
