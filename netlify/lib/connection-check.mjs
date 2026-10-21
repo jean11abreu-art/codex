@@ -1,5 +1,5 @@
 import { queries } from './queries.mjs';
-import { authorization, graphqlFailure } from './upstream-errors.mjs';
+import { authorization, DEFAULT_AUTH_SCHEME, graphqlFailure } from './upstream-errors.mjs';
 
 const URL = 'https://api.maxiprod.com.br/graphql/';
 const basicQuery = 'query ConnectionCompanies { empresas(take: 1) { items { id } } }';
@@ -22,7 +22,7 @@ export async function checkConnection({ env = process.env, fetcher = fetch } = {
   // claims, customer names/IDs, records, raw errors or extension values escape.
   authorization(env);
   const probeEnv = { ...env, MAXIPROD_API_KEY: env.MAXIPROD_API_KEY.trim().replace(/^Bearer\s+/i, '').trim() };
-  const configuredScheme = env.MAXIPROD_AUTH_SCHEME || 'Bearer';
+  const configuredScheme = env.MAXIPROD_AUTH_SCHEME || DEFAULT_AUTH_SCHEME;
   const steps = [];
   const signal = AbortSignal.timeout(20000);
   async function probe(key, label, scheme, query, variables) {

@@ -33,7 +33,7 @@ test('falha genérica para ambos os formatos é inconclusiva e não expõe dados
   for (const secret of [env.MAXIPROD_API_KEY, 'private-company-name', 'private-stack-and-token', '123']) assert.ok(!JSON.stringify(result).includes(secret));
 });
 test('detecta formato sem prefixo sem modificar variáveis ou a chave', async () => {
-  const original = { MAXIPROD_API_KEY: 'Bearer fake-token-never-output' };
+  const original = { MAXIPROD_API_KEY: 'Bearer fake-token-never-output', MAXIPROD_AUTH_SCHEME: 'Bearer' };
   const result = await checkConnection({ env: original, fetcher: async (_url, init) => {
     const { query } = JSON.parse(init.body);
     return init.headers.Authorization === 'fake-token-never-output' ? passed(query) : denied();
@@ -60,7 +60,10 @@ test('isola filtro, ordenação, paginação e tamanho da página em consultas p
   }
 });
 test('sucesso no cadastro de empresas não é apresentado como sucesso das finanças', async () => {
-  const result = await checkConnection({ env, fetcher: async (_url, init) => passed(JSON.parse(init.body).query) });
+  const result = await checkConnection({ env, fetcher: async (_url, init) => {
+    assert.equal(init.headers.Authorization, env.MAXIPROD_API_KEY);
+    return passed(JSON.parse(init.body).query);
+  } });
   assert.equal(result.reference, 'MP-CHECK-COMPANIES-OK');
   assert.equal(result.steps.length, 6);
   assert.match(result.action, /dados financeiros ainda precisam/);

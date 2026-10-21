@@ -1,5 +1,9 @@
 import { PublicError } from './http.mjs';
 
+// Confirmed by the authenticated production connection check: GraphQL accepts
+// Authorization: <token>, while the Bearer-prefixed company query is rejected.
+export const DEFAULT_AUTH_SCHEME = 'Raw';
+
 const steps = {
   companies: 'cadastro de empresas', accounts: 'plano de contas',
   payable: 'contas a pagar', receivable: 'contas a receber', cash: 'movimentos de caixa/bancos',
@@ -31,9 +35,9 @@ export function graphqlFailure(name, errors) {
 export function authorization(env, now = Date.now()) {
   let token = env.MAXIPROD_API_KEY?.trim();
   if (!token) throw new PublicError(503, 'KEY_MISSING', 'Configure MAXIPROD_API_KEY no Netlify.');
-  const scheme = env.MAXIPROD_AUTH_SCHEME || 'Bearer';
+  const scheme = env.MAXIPROD_AUTH_SCHEME || DEFAULT_AUTH_SCHEME;
   if (!['Bearer', 'Raw'].includes(scheme)) throw new PublicError(503, 'AUTH_CONFIG', 'MAXIPROD_AUTH_SCHEME deve ser Bearer ou Raw, conforme a documentação do Maxiprod.');
-  if (scheme === 'Bearer') token = token.replace(/^Bearer\s+/i, '').trim();
+  token = token.replace(/^Bearer\s+/i, '').trim();
   if (!token || /\s|["']|^MAXIPROD_API_KEY=/i.test(token)) {
     throw new PublicError(503, 'TOKEN_FORMAT', 'Revise o valor de Produção de MAXIPROD_API_KEY: cole somente o token, sem aspas, quebras de linha ou o nome da variável.');
   }

@@ -11,15 +11,16 @@ import { total } from '../src/finance.mjs';
 import { authorization, graphqlFailure } from '../netlify/lib/upstream-errors.mjs';
 
 test('token não recebe Bearer duplicado e validade JWT não exige expor credencial', () => {
-  assert.equal(authorization({ MAXIPROD_API_KEY: '  token-opaco  ' }), 'Bearer token-opaco');
-  assert.equal(authorization({ MAXIPROD_API_KEY: 'Bearer token-opaco' }), 'Bearer token-opaco');
+  assert.equal(authorization({ MAXIPROD_API_KEY: '  token-opaco  ' }), 'token-opaco');
+  assert.equal(authorization({ MAXIPROD_API_KEY: 'Bearer token-opaco' }), 'token-opaco');
+  assert.equal(authorization({ MAXIPROD_API_KEY: 'Bearer token-opaco', MAXIPROD_AUTH_SCHEME: 'Bearer' }), 'Bearer token-opaco');
   assert.equal(authorization({ MAXIPROD_API_KEY: 'token-opaco', MAXIPROD_AUTH_SCHEME: 'Raw' }), 'token-opaco');
   for (const key of ['MAXIPROD_API_KEY=valor', '"valor"', 'Bearer Bearer token', 'um\ntoken']) {
     assert.throws(() => authorization({ MAXIPROD_API_KEY: key }), error => error.code === 'TOKEN_FORMAT' && !error.message.includes(key));
   }
   const token = expiry => `e30.${Buffer.from(JSON.stringify({ exp: expiry, sub: 'private-user' })).toString('base64url')}.c2ln`;
   assert.throws(() => authorization({ MAXIPROD_API_KEY: token(1) }), error => error.code === 'TOKEN_EXPIRED' && !error.message.includes('private-user'));
-  assert.equal(authorization({ MAXIPROD_API_KEY: token(200) }, 100000), 'Bearer ' + token(200));
+  assert.equal(authorization({ MAXIPROD_API_KEY: token(200) }, 100000), token(200));
 });
 
 test('diagnóstico distingue autenticação, permissão e consulta sem copiar dados do Maxiprod', () => {
@@ -84,7 +85,7 @@ test('paginação respeita o tamanho real da página e recusa totais parciais ou
   const rows = await allPages('companies', {}, { env, fetcher: async (url, init) => {
     const skip = JSON.parse(init.body).variables.skip; seen.push(skip);
     assert.equal(url, 'https://api.maxiprod.com.br/graphql/');
-    assert.equal(init.headers.Authorization, 'Bearer ' + env.MAXIPROD_API_KEY);
+    assert.equal(init.headers.Authorization, env.MAXIPROD_API_KEY);
     return response('companies', skip === 0 ? [{ id: 1 }, { id: 2 }] : [{ id: 3 }], skip === 0, 3);
   } });
   assert.equal(rows.length, 3); assert.deepEqual(seen, [0, 2]);
@@ -111,6 +112,9 @@ test('saldo parcial usa o valor restante e filtros excluem estados duplicados', 
 
 function fixtureFetch(cashRows = []) {
   return async (_url, init) => {
+    // Regression: every financial and metadata query uses the production-tested
+    // raw-token header by default, not the Bearer scheme of the REST API.
+    assert.equal(init.headers.Authorization, env.MAXIPROD_API_KEY);
     const { query } = JSON.parse(init.body);
     const name = Object.keys(queries).find(name => queries[name] === query);
     return response(name, ({ companies: [{ id: 1, apelido: 'Empresa teste' }], accounts: [{ id: 3, codigoEstruturado: '3.1', descricao: 'Frete' }], payable: [title], receivable: [], cash: cashRows })[name]);
