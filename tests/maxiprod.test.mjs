@@ -8,6 +8,28 @@ import { authenticated, configured, passwordMatches, sessionCookie } from '../ne
 import finance, { loadFinance } from '../netlify/functions/finance.mjs';
 import session from '../netlify/functions/session.mjs';
 import { total } from '../src/finance.mjs';
+import { authorization, graphqlFailure } from '../netlify/lib/upstream-errors.mjs';
+
+test('token não recebe Bearer duplicado e validade JWT não exige expor credencial', () => {
+  assert.equal(authorization({ MAXIPROD_API_KEY: '  token-opaco  ' }), 'Bearer token-opaco');
+  assert.equal(authorization({ MAXIPROD_API_KEY: 'Bearer token-opaco' }), 'Bearer token-opaco');
+  assert.equal(authorization({ MAXIPROD_API_KEY: 'token-opaco', MAXIPROD_AUTH_SCHEME: 'Raw' }), 'token-opaco');
+  for (const key of ['MAXIPROD_API_KEY=valor', '"valor"', 'Bearer Bearer token', 'um\ntoken']) {
+    assert.throws(() => authorization({ MAXIPROD_API_KEY: key }), error => error.code === 'TOKEN_FORMAT' && !error.message.includes(key));
+  }
+  const token = expiry => `e30.${Buffer.from(JSON.stringify({ exp: expiry, sub: 'private-user' })).toString('base64url')}.c2ln`;
+  assert.throws(() => authorization({ MAXIPROD_API_KEY: token(1) }), error => error.code === 'TOKEN_EXPIRED' && !error.message.includes('private-user'));
+  assert.equal(authorization({ MAXIPROD_API_KEY: token(200) }, 100000), 'Bearer ' + token(200));
+});
+
+test('diagnóstico distingue autenticação, permissão e consulta sem copiar dados do Maxiprod', () => {
+  for (const [upstream, expected] of [['AUTH_NOT_AUTHENTICATED', 'AUTH'], ['AUTH_NOT_AUTHORIZED', 'PERMISSION'], ['COST_EXCEEDED', 'LIMIT'], ['GRAPHQL_VALIDATION_FAILED', 'QUERY'], ['PRIVATE_SECRET', 'EXECUTION']]) {
+    const error = graphqlFailure('companies', [{ message: 'private customer secret', path: ['private-id'], extensions: { code: upstream, secret: 'private-key' } }]);
+    assert.equal(error.code, 'UPSTREAM_' + expected);
+    assert.match(error.message, new RegExp('MP-COMPANIES-' + expected));
+    for (const secret of ['private customer', 'private-id', 'private-key', 'PRIVATE_SECRET']) assert.ok(!error.message.includes(secret));
+  }
+});
 
 const env = { MAXIPROD_API_KEY: 'fake-api-key-for-automated-tests', DASHBOARD_PASSWORD: 'Test-only-long-password-123456' };
 const now = new Date('2026-10-21T15:00:00Z');

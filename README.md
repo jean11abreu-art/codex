@@ -18,6 +18,10 @@ A primeira consulta autenticada em produção ainda precisa confirmar o token, s
 
 Cadastrar variáveis ou publicar o código não comprova conexão com o Maxiprod. Nenhuma chave real é necessária para os testes automatizados. O ambiente de desenvolvimento não tem acesso às variáveis privadas do Netlify.
 
+O servidor remove espaços nas extremidades do token e evita duplicar o prefixo `Bearer` quando ele já tiver sido colado. Valores com aspas, quebras de linha ou `MAXIPROD_API_KEY=` são recusados com orientação para corrigir o campo de Produção. Se um token no formato JWT informar validade expirada, a consulta é interrompida sem expor suas informações; isso não substitui a validação da assinatura pelo Maxiprod.
+
+Erros da consulta identificam a etapa com uma referência como `MP-COMPANIES-EXECUTION`. Autenticação, permissão e validação/complexidade são diferenciadas quando há evidência na resposta. A mensagem genérica `Unexpected Execution Error` do Maxiprod não prova falta de permissão: nesse caso o painel informa que a causa não foi fornecida. Textos brutos, caminhos, dados e extensões arbitrárias da resposta externa não são repassados ao navegador nem aos logs.
+
 ## Custos mensais
 
 No painel conectado, clique na engrenagem de **Custos do mês** ou em **Configurações**. Selecione as contas contábeis de destino que representam Frete, Salários e Financiamento. Use Ctrl/Command para múltiplas seleções. Uma conta pertence a uma categoria por vez; a escolha remove sobreposições. As preferências guardam somente IDs de contas neste navegador, separadas por empresa. Valores, senhas e títulos reais não são armazenados no localStorage.
