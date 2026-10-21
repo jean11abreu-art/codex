@@ -16,6 +16,14 @@ Também é possível baixar somente [o pacote de publicação](premium-flex-publ
 
 Depois de alterar o aplicativo, `npm run build` atualiza a pasta `premium-flex-site`. O ZIP é uma cópia da versão preparada para esta entrega. Publicar esses arquivos no GitHub disponibiliza o download; a hospedagem pública do painel ocorre após o envio à Netlify.
 
+## Preparar a integração pelo servidor
+
+O projeto existente na Netlify deve ser vinculado ao repositório GitHub `jean11abreu-art/codex`, usando a branch `main`. O arquivo `netlify.toml` configura Node.js 24, o build `npm run build` e a pasta de publicação `premium-flex-site`.
+
+Vincule o repositório ao projeto Netlify já publicado para preservar seu endereço e as variáveis de ambiente cadastradas. O envio manual da pasta por Netlify Drop publica a demonstração estática; o vínculo com Git permitirá construir e publicar as funções de servidor da integração.
+
+A variável de produção esperada no servidor é `MAXIPROD_API_KEY`, cadastrada como segredo na Netlify e disponível ao escopo Functions. Não coloque seu valor no repositório ou em variáveis `VITE_*`. Cadastrar a variável e vincular o repositório não validam a chave nem conectam a API: ainda faltam a documentação oficial do Maxiprod, os endpoints e a implementação do backend com controle de acesso.
+
 ## Desenvolvimento
 
 Requer Node.js 22.12 ou superior (validado com Node.js 24.19).

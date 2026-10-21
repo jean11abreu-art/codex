@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "premium-flex-site"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+[functions]
+  node_bundler = "esbuild"
