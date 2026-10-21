@@ -24,27 +24,35 @@ Erros da consulta identificam a etapa com uma referência como `MP-COMPANIES-EXE
 
 Na tela de erro, **Verificar conexão** executa um diagnóstico autenticado por `/api/connection-check` (POST, mesma origem). Testa a consulta básica, a consulta mínima de empresas e, se necessário, os formatos Bearer e Raw usando a mesma chave e o mesmo servidor HTTPS. Os testes são de leitura e não alteram variáveis ou permissões. Quando a consulta mínima funciona, verifica filtro, ordenação, paginação/contagem e tamanho de página separadamente. O relatório contém apenas rótulos locais e resultados, sem registros, nomes, IDs, token, dados do JWT ou respostas brutas. Cada execução faz no máximo seis consultas e tem prazo compartilhado de 20 segundos. Se ambos os formatos forem recusados sem explicação, o diagnóstico é inconclusivo: não comprova token inválido ou permissão negada. É preciso conferir a aplicação da variável após nova implantação e validar o acesso no explorador oficial ou com o suporte do Maxiprod.
 
-## Custos mensais
+## Configurações financeiras compartilhadas
 
-No painel conectado, clique na engrenagem de **Custos do mês** ou em **Configurações**. Selecione as contas contábeis de destino que representam Frete, Salários e Financiamento. Use Ctrl/Command para múltiplas seleções. Uma conta pertence a uma categoria por vez; a escolha remove sobreposições. As preferências guardam somente IDs de contas neste navegador, separadas por empresa. Valores, senhas e títulos reais não são armazenados no localStorage.
+No painel conectado, clique em **Configurações**, na engrenagem de **Custos do mês** ou em **Configurar saldo**. A tela permite selecionar contas e informar o saldo real sem editar variáveis no Netlify. Os campos não são preenchidos com valores fictícios.
 
-Categorias sem seleção mostram **Selecionar contas**, e não um custo zero. Os custos somam o valor líquido lançado por vencimento do mês atual, incluindo pagos e em aberto. Outras contas ficam fora das três categorias; o total é identificado como total das categorias configuradas.
+As configurações são guardadas por empresa no armazenamento privado **Netlify Blobs**, em um store nomeado que persiste entre deploys. O contexto de acesso é fornecido automaticamente pelo Netlify às funções v2; não é necessário cadastrar outro token. Somente o servidor usa o SDK `@netlify/blobs`.
 
-## Saldo inicial e projeção
+`GET /api/settings` e `PUT /api/settings` exigem sessão. A gravação também exige a mesma origem, valida o tamanho/campos do JSON, confirma a empresa disponível para o token e verifica os IDs no plano de contas. Valores são salvos em centavos, sem token nem senha. Leituras usam consistência forte; gravações condicionais usam a versão/ETag para impedir sobrescrita quando duas pessoas editam simultaneamente. Um conflito exige recarregar o formulário. Não há gravações no Maxiprod.
 
-O esquema não contém um saldo bancário atual pronto para consulta. Sem referência de abertura, os cards mostram **A configurar**. O saldo fictício e as preferências da demonstração nunca entram nos cálculos reais.
+Se o armazenamento estiver indisponível, a consulta de títulos continua funcionando. Saldo, projeção e categorias ficam sem configuração disponível e um aviso explica a falha; não são substituídos por saldos fictícios, valores antigos de outra origem ou zeros. A tela de configurações também pode ser aberta a partir de um erro de consulta, permitindo corrigir a referência de saldo.
 
-Depois de validar a empresa e as contas de caixa/bancos, cadastre no Netlify a variável de servidor `MAXIPROD_OPENING_BALANCES`, no contexto Produção/Funções, usando JSON:
+### Custos mensais
 
-```json
-{"123":{"date":"2026-10-01","cents":1234500}}
-```
+Use a busca por nome/código e marque as contas de destino de **Frete**, **Salários** e **Bancos/Financiamentos**. Uma conta pertence a uma categoria por vez; selecionar em outra remove a atribuição anterior. Revise e clique em **Salvar configurações**. O servidor aceita até 100 contas por categoria e recusa contas que não estejam disponíveis.
 
-`123` é o ID da empresa, não o ID de uma conta. O exemplo é fictício. `cents` é o saldo consolidado **de todas as contas analíticas com finalidade CAIXA_BANCO** antes de qualquer movimento de `date`. O exemplo representa R$ 12.345,00 antes dos movimentos de 01/10/2026. Use a data e o saldo reais apurados no ERP; não copie o exemplo. É possível cadastrar várias empresas no mesmo JSON. A data não pode ser futura. Faça nova implantação após mudar a variável.
+Seleções antigas deste navegador, quando existirem, são importadas somente para revisão no formulário. Elas só passam a valer como configuração compartilhada após salvar. Valores financeiros reais não são armazenados no localStorage.
 
-O saldo soma débitos e subtrai créditos dessas contas entre a abertura e hoje, excluindo lançamentos contábeis de encerramento. Transferências entre contas incluídas se anulam na consolidação. Isso representa saldo com base contábil e exige conciliação com os extratos. Não é uma consulta direta ao banco.
+Categorias sem seleção mostram **Selecionar contas**, e não custo zero. Os custos somam o valor líquido lançado por vencimento do mês atual, incluindo pagos e em aberto. Outras contas ficam fora das três categorias; o total é identificado como total das categorias configuradas.
 
-A projeção soma ao saldo atual os valores ainda em aberto a receber e subtrai os valores ainda em aberto a pagar, com vencimento até o fim do mês, incluindo atrasados. A projeção não garante a liquidação futura.
+### Saldo inicial e projeção
+
+Ative **Usar saldo inicial real**, escolha a data de referência e informe o saldo consolidado **de todas as contas analíticas com finalidade CAIXA_BANCO antes de qualquer movimento daquela data**. Para iniciar hoje, use o saldo de encerramento de ontem. O formulário aceita reais no padrão brasileiro (`1.234,56`), zero e valores negativos; a data não pode ser futura. O limite é R$ 1 bilhão, positivo ou negativo. Salve para recalcular os indicadores com os movimentos do Maxiprod.
+
+O esquema não contém um saldo bancário atual pronto para consulta. Sem referência, os cards mostram **A configurar**. O saldo fictício e as preferências da demonstração nunca entram nos cálculos reais.
+
+O saldo soma débitos e subtrai créditos das contas de caixa/bancos entre a abertura e hoje, excluindo lançamentos de encerramento. Transferências entre contas incluídas se anulam na consolidação. Isso representa saldo com base contábil e exige conciliação com os extratos; não é uma consulta direta ao banco.
+
+A projeção soma ao saldo atual os valores ainda em aberto a receber e subtrai os valores ainda em aberto a pagar, com vencimento até o fim do mês, incluindo atrasados. Ela não garante a liquidação futura.
+
+Por compatibilidade, a antiga variável `MAXIPROD_OPENING_BALANCES` pode fornecer a referência antes do primeiro salvamento no painel. O valor salvo na tela tem precedência; desativar o saldo e salvar mantém os cards sem referência, mesmo que a variável antiga exista. Alterar as configurações pela tela não exige nova implantação.
 
 ## Regras e cobertura
 

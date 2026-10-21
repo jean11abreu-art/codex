@@ -1,11 +1,12 @@
 import { requireSession } from '../lib/auth.mjs';
 import { failure, json, PublicError } from '../lib/http.mjs';
-import { allPages, cents, id, normalizeTitle, safeSum, titleFilter, validDate, validateRange } from '../lib/maxiprod.mjs';
+import { allPages, cents, id, normalizeTitle, safeSum, titleFilter, validateRange } from '../lib/maxiprod.mjs';
+import { emptyCosts, readSettings, todayInBrazil } from '../lib/settings.mjs';
 
-export async function loadFinance(params, { env = process.env, fetcher = fetch, now = new Date() } = {}) {
+export async function loadFinance(params, { env = process.env, fetcher = fetch, now = new Date(), settingsReader = readSettings } = {}) {
   const start = params.get('start'); const end = params.get('end');
   validateRange(start, end);
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const today = todayInBrazil(now);
   const month = { start: today.slice(0, 7) + '-01', end: new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0)).toISOString().slice(0, 10) };
   const options = { env, fetcher, signal: AbortSignal.timeout(24000) };
   const companies = (await allPages('companies', {}, options)).map(row => ({ id: id(row.id), name: row.apelido }));
@@ -14,14 +15,11 @@ export async function loadFinance(params, { env = process.env, fetcher = fetch, 
   if (requestedCompany && !company) throw new PublicError(400, 'COMPANY', 'Selecione uma empresa disponível para este acesso.');
   if (!company) return { companies, needsCompany: true };
 
-  let opening = null;
-  if (env.MAXIPROD_OPENING_BALANCES) {
-    let settings; try { settings = JSON.parse(env.MAXIPROD_OPENING_BALANCES); } catch { throw new PublicError(503, 'BALANCE_CONFIG', 'Revise o JSON de MAXIPROD_OPENING_BALANCES no Netlify.'); }
-    opening = settings[company.id] ?? null;
-    if (opening && (!validDate(opening.date) || opening.date > today || !Number.isSafeInteger(opening.cents))) {
-      throw new PublicError(503, 'BALANCE_CONFIG', 'O saldo inicial deve ter data válida até hoje e valor em centavos inteiros.');
-    }
-  }
+  let preferences; let settingsWarning = '';
+  try { preferences = await settingsReader(company.id, { env, today }); }
+  catch { settingsWarning = 'As configurações salvas não puderam ser lidas. Saldo, projeção e categorias ficam indisponíveis até a leitura ser restabelecida.'; }
+  const settings = preferences?.settings || { costMapping: emptyCosts(), opening: null };
+  const opening = settings.opening;
   const cashWhere = { and: [
     { minhaEmpresaId: { eq: Number(company.id) } },
     { contaContabil: { finalidade: { eq: 'CAIXA_BANCO' }, analiticaOuSintetica: { eq: 'ANALITICA' } } },
@@ -50,11 +48,13 @@ export async function loadFinance(params, { env = process.env, fetcher = fetch, 
     'Fluxo e custos usam o vencimento dos títulos. Recebimentos e pagamentos do dia usam movimentos de caixa/bancos vinculados a títulos; transferências e movimentos sem vínculo ficam fora desses dois indicadores.',
     'Pedidos, cotações, propostas, retenções separadas, títulos em digitação, cancelados, agrupados, parcelados e compensados ficam fora dos totais de títulos. Confira a cobertura com o financeiro antes de usar os totais para decisões.',
   ];
+  if (settingsWarning) warnings.unshift(settingsWarning);
   if (!opening) warnings.unshift('Saldo e projeção aguardam um saldo inicial consolidado de caixa/bancos desta empresa. Os valores de demonstração não são utilizados.');
   else warnings.unshift(`Saldo calculado a partir da abertura em ${opening.date}, antes dos movimentos daquele dia. Inclui contas analíticas com finalidade CAIXA_BANCO; confira a conciliação bancária.`);
   return {
     companies, company, today, month, range: { start, end }, entries,
-    accounts: accountRows.map(row => ({ id: id(row.id), code: row.codigoEstruturado, name: row.descricao || 'Sem descrição' })),
+    accounts: accountRows.map(row => ({ id: id(row.id), code: row.codigoEstruturado, name: row.descricao || 'Sem descrição', purpose: row.finalidade || null })),
+    settings, settingsAvailable: Boolean(preferences),
     bankBalanceCents, projectionCents,
     daily: { incomingCents: safeSum(incoming.map(signed)), outgoingCents: safeSum(outgoing.map(row => -signed(row))), incomingCount: incoming.length, outgoingCount: outgoing.length },
     fetchedAt: now.toISOString(), warnings,

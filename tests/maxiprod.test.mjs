@@ -9,6 +9,9 @@ import finance, { loadFinance } from '../netlify/functions/finance.mjs';
 import session from '../netlify/functions/session.mjs';
 import { total } from '../src/finance.mjs';
 import { authorization, graphqlFailure } from '../netlify/lib/upstream-errors.mjs';
+import { emptyCosts, readSettings } from '../netlify/lib/settings.mjs';
+import { memorySettingsStore } from './helpers/memory-settings.mjs';
+const testSettingsReader = (companyId, options) => readSettings(companyId, { ...options, storage: memorySettingsStore() });
 
 test('token não recebe Bearer duplicado e validade JWT não exige expor credencial', () => {
   assert.equal(authorization({ MAXIPROD_API_KEY: '  token-opaco  ' }), 'token-opaco');
@@ -121,7 +124,7 @@ function fixtureFetch(cashRows = []) {
   };
 }
 test('consulta sem saldo inicial mantém saldo/projeção indisponíveis e usa liquidações parciais do dia', async () => {
-  const result = await loadFinance(new URLSearchParams({ start: '2026-10-01', end: '2026-10-31' }), { env, now, fetcher: fixtureFetch([
+  const result = await loadFinance(new URLSearchParams({ start: '2026-10-01', end: '2026-10-31' }), { env, now, settingsReader: testSettingsReader, fetcher: fixtureFetch([
     { id: 1, data: '2026-10-21', valor: '40', debitoOuCredito: 'CREDITO', contaAPagar: { id: 7 } },
     { id: 2, data: '2026-10-21', valor: '1000', debitoOuCredito: 'DEBITO' }, // Transfer not a receipt.
   ]) });
@@ -132,10 +135,30 @@ test('consulta sem saldo inicial mantém saldo/projeção indisponíveis e usa l
 });
 test('saldo consolidado e projeção usam abertura da empresa e saldo pendente', async () => {
   const configuredEnv = { ...env, MAXIPROD_OPENING_BALANCES: JSON.stringify({ 1: { date: '2026-10-01', cents: 5000 } }) };
-  const result = await loadFinance(new URLSearchParams({ start: '2026-10-01', end: '2026-10-31' }), { env: configuredEnv, now, fetcher: fixtureFetch([
+  const result = await loadFinance(new URLSearchParams({ start: '2026-10-01', end: '2026-10-31' }), { env: configuredEnv, now, settingsReader: testSettingsReader, fetcher: fixtureFetch([
     { id: 1, data: '2026-10-21', valor: '40', debitoOuCredito: 'CREDITO', contaAPagar: { id: 7 } },
     { id: 2, data: '2026-10-20', valor: '10', debitoOuCredito: 'DEBITO', contaAReceber: { id: 8 } },
   ]) });
   assert.equal(result.bankBalanceCents, 2000); assert.equal(result.projectionCents, -4000);
   assert.equal(result.daily.incomingCents, 0);
+});
+
+test('saldo salvo no painel substitui a referência legada e recarrega as categorias', async () => {
+  const costs = { ...emptyCosts(), Frete: ['3'] };
+  const result = await loadFinance(new URLSearchParams({ start: '2026-10-01', end: '2026-10-31' }), {
+    env: { ...env, MAXIPROD_OPENING_BALANCES: JSON.stringify({ 1: { date: '2026-10-01', cents: 99999999 } }) }, now,
+    settingsReader: async () => ({ settings: { costMapping: costs, opening: { date: '2026-10-21', cents: -1000 } } }),
+    fetcher: fixtureFetch([{ id: 1, data: '2026-10-21', valor: '40', debitoOuCredito: 'CREDITO', contaAPagar: { id: 7 } }]),
+  });
+  assert.equal(result.bankBalanceCents, -5000); assert.equal(result.projectionCents, -11000);
+  assert.deepEqual(result.settings.costMapping.Frete, ['3']);
+});
+test('falha de leitura das configurações pausa saldos sem substituir os títulos reais', async () => {
+  const result = await loadFinance(new URLSearchParams({ start: '2026-10-01', end: '2026-10-31' }), {
+    env, now, settingsReader: async () => { throw new Error('private storage failure'); }, fetcher: fixtureFetch(),
+  });
+  assert.equal(result.bankBalanceCents, null); assert.equal(result.projectionCents, null);
+  assert.equal(result.settingsAvailable, false); assert.equal(result.entries.length, 1);
+  assert.ok(result.warnings.some(warning => warning.includes('não puderam ser lidas')));
+  assert.ok(!JSON.stringify(result).includes('private storage failure'));
 });

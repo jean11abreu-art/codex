@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import App from './App';
+import FinancialSettings from './FinancialSettings';
 import { PremiumFlexLogo, BrazilFlag } from './Brand';
 import { api, type Company, type LiveData, type Range } from './connection';
 import { dateKey, monthRange } from './finance.mjs';
 type CheckReport = { reference: string; summary: string; action: string; steps: { key: string; label: string; ok: boolean; note: string }[] };
 
 export default function Portal() {
-  const [view, setView] = useState<'demo' | 'login' | 'loading' | 'live' | 'error' | 'companies'>('demo');
+  const [view, setView] = useState<'demo' | 'login' | 'loading' | 'live' | 'error' | 'companies' | 'settings'>('demo');
   const [data, setData] = useState<LiveData | null>(null);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -63,7 +64,8 @@ export default function Portal() {
     catch { setError('Não foi possível encerrar a sessão no servidor. Feche o navegador ou tente novamente.'); setView('error'); }
   }
   if (view === 'demo') return <App onConnect={connect} />;
-  if (view === 'live' && data) return <App live={data} initialRange={range} initialPeriod={period} onLogout={logout} onRefresh={() => load()} onRangeChange={(next, nextPeriod) => { setRange(next); setPeriod(nextPeriod); void load(next); }} onCompanyChange={value => { setCompany(value); void load(range, value); }} />;
+  if (view === 'settings') return <FinancialSettings companyId={company} onCancel={connect} onSaved={id => { setCompany(id); void load(range, id); }} />;
+  if (view === 'live' && data) return <App live={data} initialRange={range} initialPeriod={period} onSettings={() => setView('settings')} onLogout={logout} onRefresh={() => load()} onRangeChange={(next, nextPeriod) => { setRange(next); setPeriod(nextPeriod); void load(next); }} onCompanyChange={value => { setCompany(value); void load(range, value); }} />;
   return <main className="access-screen"><section className="access-card"><div className="access-brand"><PremiumFlexLogo /><BrazilFlag /></div>
     <p className="eyebrow">PAINEL FINANCEIRO</p><h1>{view === 'loading' ? 'Consultando com segurança…' : view === 'companies' ? 'Selecione sua empresa' : view === 'error' ? 'Consulta não concluída' : 'Acesse seu financeiro'}</h1>
     {error && <p role="alert" className="form-error">{error}</p>}
@@ -71,6 +73,7 @@ export default function Portal() {
     {view === 'companies' && (companies.length ? <label className="balance-label">Empresa<select aria-label="Selecionar empresa" value="" onChange={event => { setCompany(event.target.value); void load(range, event.target.value); }}><option value="" disabled>Escolha uma empresa</option>{companies.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : <p>Este token não disponibilizou nenhuma empresa própria. Confira suas permissões no Maxiprod.</p>)}
     {view === 'loading' && <p role="status">Buscando todas as páginas dos lançamentos. Nenhum dado de demonstração será usado nesta consulta.</p>}
     {view === 'error' && <button className="button primary full-width" onClick={connect}>Tentar novamente</button>}
+    {view === 'error' && <button className="button full-width" onClick={() => setView('settings')}>Configurações financeiras</button>}
     {view === 'error' && <><button className="button full-width" disabled={checking} onClick={diagnose}>{checking ? 'Verificando conexão…' : 'Verificar conexão'}</button>{checking && <p role="status">Testando consultas pequenas pelo servidor…</p>}{checkError && <p role="alert" className="form-error">{checkError}</p>}{report && <section className="connection-report" aria-label="Diagnóstico da conexão"><h2>Diagnóstico da conexão</h2><p><strong>{report.summary}</strong></p><ul>{report.steps.map(step => <li key={step.key}><strong>{step.ok ? '✓ Funcionou' : '✕ Falhou'} · {step.label}</strong><span>{step.note}</span></li>)}</ul><p>{report.action}</p><p><strong>Referência: {report.reference}</strong></p></section>}</>}
     {view !== 'loading' && <button className="button full-width" onClick={() => { setPassword(''); setData(null); setError(''); setView('demo'); }}>Voltar à demonstração</button>}
     <small>Data de referência: {dateKey(new Date())} · Chave da API protegida no servidor</small>
