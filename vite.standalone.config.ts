@@ -6,7 +6,7 @@ export default defineConfig({
     name: 'system-fonts-for-portable-preview',
     enforce: 'pre',
     transform(source, id) {
-      if (id.endsWith('/src/styles.css')) {
+      if ((id.endsWith('/src/styles.css') || id.endsWith('/src/hoses.css'))) {
         return source.replace(/^@import\s+['"]@fontsource\/[^;]+;\s*/gm, '');
       }
     },

@@ -36,7 +36,7 @@ const server = await createServer({
 });
 let markup;
 try {
-  const { default: App } = await server.ssrLoadModule('/src/App.tsx');
+  const { default: App } = await server.ssrLoadModule('/src/HoseApp.tsx');
   markup = renderToString(createElement(App));
 } finally {
   await server.close();
@@ -49,7 +49,7 @@ html = html.replace('<div id="root"></div>', () => `<div id="root">${markup}</di
 html = html.replace('</body>', () => `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>\n</body>`);
 html = html.replace('<html lang="pt-BR">', '<html lang="pt-BR">\n<!-- Prévia gerada por npm run build. Fonte: app.html e src/. -->');
 html = html.replace(/^[ \t]+$/gm, '');
-if (Buffer.byteLength(html) > 150000) throw new Error('A prévia ultrapassou o limite de tamanho definido para esta versão leve.');
+if (Buffer.byteLength(html) > 750000) throw new Error('A prévia ultrapassou o limite de tamanho definido para esta versão leve.');
 
 // An explicit read-only fallback isolates viewers that reject any scripting.
 const staticHtml = html
@@ -58,7 +58,7 @@ const staticHtml = html
   .replace(/<button\b/g, '<button disabled')
   .replace(/<input\b/g, '<input disabled')
   .replace('</style>', 'button:disabled{opacity:1}body{padding-bottom:48px}</style>')
-  .replace('</body>', '<p style="position:fixed;bottom:0;left:0;right:0;z-index:100;margin:0;padding:12px;background:#fff4d7;text-align:center;font:13px system-ui">Prévia visual estática · dados de demonstração · filtros e botões disponíveis no arquivo Painel.</p></body>')
+  .replace('</body>', '<p style="position:fixed;bottom:0;left:0;right:0;z-index:100;margin:0;padding:12px;background:#fff4d7;text-align:center;font:13px system-ui">Prévia visual estática · formulário de montagem · edição disponível com JavaScript.</p></body>')
   .replace(/^[ \t]+$/gm, '');
 await writeFile(resolve(root, 'painel-estatico.html'), staticHtml);
 
