@@ -15,3 +15,9 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "same-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/catalogo-premiumflex.pdf"
+  [headers.values]
+    Content-Type = "application/pdf"
+    Content-Disposition = 'attachment; filename="Catalogo-Premiumflex.pdf"'
