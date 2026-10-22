@@ -28,3 +28,9 @@ O logotipo vetorial Premium Flex existente em `src/Brand.tsx` é usado por padr�
 Imprimir A4 abre a impressão do navegador. Dez linhas usam a máscara padrão; ordens maiores podem continuar em outras páginas. Revise a prévia e desative cabeçalhos/rodapés do navegador se necessário.
 
 O build atualiza os HTMLs portáteis já existentes no projeto. Não publica o site automaticamente.
+
+## Posição e relatório
+
+Cada linha permite selecionar 0º, 90º, 180º ou 270º. Ordens antigas não recebem uma posição presumida. O relatório da ordem atual inclui alterações ainda não salvas e agrupa pelo CJ, capa, mangueira/norma, terminal A, terminal B, comprimento e posição, somando quantidades inteiras positivas. Espaços e diferenças entre maiúsculas/minúsculas não criam grupos separados.
+
+O resumo de materiais soma duas capas e um terminal de cada lado por conjunto. Se A e B forem iguais, suas quantidades são somadas. Mangueiras são totalizadas em metros pelo comprimento em milímetros × quantidade, sem perdas. Linhas sem comprimento válido geram aviso de total incompleto. O relatório é impresso após a ordem, em uma nova página A4.
