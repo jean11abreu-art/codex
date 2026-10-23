@@ -80,8 +80,8 @@ const commercialHtml = html
   .replace('Ordens de montagem de mangueiras hidráulicas Premium Plus.', 'Painel comercial Premiumflex: clientes, curva ABC e relacionamento.')
   .replace(markup, () => commercialMarkup);
 await mkdir(resolve(root, 'premium-flex-site/comercial'), { recursive: true });
-await writeFile(resolve(root, 'premium-flex-site/comercial/index.html'), commercialHtml);
-await writeFile(resolve(root, 'dist/comercial.html'), commercialHtml);
+
+
 
 // Pacote portátil: apenas demonstração local; integração com API fica para a próxima etapa.
 const commercialOfflineHtml = commercialHtml
@@ -89,3 +89,7 @@ const commercialOfflineHtml = commercialHtml
   .replace(commercialMarkup, () => commercialOfflineMarkup);
 await mkdir(resolve(root, 'dist/premiumflex-comercial'), { recursive: true });
 await writeFile(resolve(root, 'dist/premiumflex-comercial/index.html'), commercialOfflineHtml);
+
+// Publicação desta etapa sem conexão à API.
+await writeFile(resolve(root, 'premium-flex-site/comercial/index.html'), commercialOfflineHtml);
+await writeFile(resolve(root, 'dist/comercial.html'), commercialOfflineHtml);
