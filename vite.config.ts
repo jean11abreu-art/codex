@@ -10,8 +10,8 @@ export default defineConfig({
       configureServer(server) {
         // index.html is the standalone preview; use the source entry for HMR.
         server.middlewares.use((request, _response, next) => {
-          if (request.url && /^\/(?:index\.html)?(?:\?|$)/.test(request.url)) {
-            request.url = request.url.replace(/^\/(?:index\.html)?/, '/app.html');
+          if (request.url && /^\/(?:index\.html|comercial\/?)?(?:\?|$)/.test(request.url)) {
+            request.url = request.url.replace(/^\/(?:index\.html|comercial\/?)?/, '/app.html');
           }
           next();
         });

@@ -31,13 +31,16 @@ const server = await createServer({
   configFile: resolve(root, 'vite.config.ts'),
   cacheDir: resolve(root, 'node_modules/.vite-preview-render'),
   optimizeDeps: { noDiscovery: true, include: [] },
-  server: { middlewareMode: true },
+  server: { middlewareMode: true, hmr: false, ws: false },
   appType: 'custom',
 });
 let markup;
+let commercialMarkup;
 try {
   const { default: App } = await server.ssrLoadModule('/src/HoseApp.tsx');
   markup = renderToString(createElement(App));
+  const { default: CommercialPortal } = await server.ssrLoadModule('/src/CommercialPortal.tsx');
+  commercialMarkup = renderToString(createElement(CommercialPortal));
 } finally {
   await server.close();
 }
@@ -67,3 +70,13 @@ for (const file of ['index.html', 'painel.html', 'dist/index.html', 'premium-fle
   await writeFile(resolve(root, file), html);
 }
 console.log(`Painel leve gerado: ${Math.round(Buffer.byteLength(html) / 1024)} KiB; HTML inicial renderizado, fontes do sistema e runtime compacto.`);
+
+// Página comercial independente; os demais aplicativos mantêm suas páginas.
+const commercialHtml = html
+  .replace('<html lang="pt-BR">', '<html lang="pt-BR" data-app="comercial">')
+  .replace('<title>Premium Plus — Montagem de mangueiras</title>', '<title>Premiumflex — Inteligência comercial</title>')
+  .replace('Ordens de montagem de mangueiras hidráulicas Premium Plus.', 'Painel comercial Premiumflex: clientes, curva ABC e relacionamento.')
+  .replace(markup, () => commercialMarkup);
+await mkdir(resolve(root, 'premium-flex-site/comercial'), { recursive: true });
+await writeFile(resolve(root, 'premium-flex-site/comercial/index.html'), commercialHtml);
+await writeFile(resolve(root, 'dist/comercial.html'), commercialHtml);

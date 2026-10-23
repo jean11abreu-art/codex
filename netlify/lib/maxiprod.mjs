@@ -32,7 +32,7 @@ export function id(value) {
   if (!/^\d+$/.test(String(value)) || !Number.isSafeInteger(Number(value)) || Number(value) <= 0) throw new PublicError(502, 'INVALID_ID', 'O Maxiprod retornou um identificador inválido.');
   return String(value);
 }
-export async function allPages(name, variables = {}, { env = process.env, fetcher = fetch, signal, maxItems = 10000 } = {}) {
+export async function allPages(name, variables = {}, { env = process.env, fetcher = fetch, signal, maxItems = 10000, queryMap = queries, rootMap = roots } = {}) {
   const authHeader = authorization(env);
   // The authenticated GraphQL read still needs validation against the production token.
   // No arbitrary URL, GraphQL operation, header name or mutation can be supplied by the browser.
@@ -43,14 +43,14 @@ export async function allPages(name, variables = {}, { env = process.env, fetche
       response = await fetcher(ENDPOINT, { method: 'POST', signal, redirect: 'error', headers: {
         'Content-Type': 'application/json', Accept: 'application/json',
         Authorization: authHeader,
-      }, body: JSON.stringify({ query: queries[name], variables: { ...variables, skip, take: 100 } }) });
+      }, body: JSON.stringify({ query: queryMap[name], variables: { ...variables, skip, take: 100 } }) });
     } catch { throw new PublicError(502, 'UPSTREAM_UNAVAILABLE', 'Não foi possível acessar o Maxiprod. Tente novamente.'); }
     if ([401, 403].includes(response.status)) throw new PublicError(502, 'UPSTREAM_AUTH', 'O Maxiprod recusou o acesso. Confira a chave, o formato de autenticação e as permissões financeiras.');
     if (response.status === 429) throw new PublicError(503, 'UPSTREAM_RATE_LIMIT', 'Limite de consultas do Maxiprod atingido. Aguarde e atualize.');
     if (!response.ok) throw new PublicError(502, 'UPSTREAM_ERROR', 'O Maxiprod não concluiu a consulta.');
     let body; try { body = await response.json(); } catch { throw new PublicError(502, 'UPSTREAM_FORMAT', 'O Maxiprod retornou uma resposta inesperada.'); }
     if (Array.isArray(body.errors) && body.errors.length) throw graphqlFailure(name, body.errors);
-    const segment = body.data?.[roots[name]];
+    const segment = body.data?.[rootMap[name]];
     if (!segment || !Array.isArray(segment.items) || typeof segment.pageInfo?.hasNextPage !== 'boolean' || !Number.isInteger(segment.totalCount) || segment.totalCount < 0) {
       throw new PublicError(502, 'UPSTREAM_FORMAT', 'A resposta do Maxiprod está incompleta. Nenhum total foi calculado.');
     }
