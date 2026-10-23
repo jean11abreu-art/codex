@@ -36,11 +36,13 @@ const server = await createServer({
 });
 let markup;
 let commercialMarkup;
+let commercialOfflineMarkup;
 try {
   const { default: App } = await server.ssrLoadModule('/src/HoseApp.tsx');
   markup = renderToString(createElement(App));
   const { default: CommercialPortal } = await server.ssrLoadModule('/src/CommercialPortal.tsx');
   commercialMarkup = renderToString(createElement(CommercialPortal));
+  commercialOfflineMarkup = renderToString(createElement(CommercialPortal, {apiEnabled:false}));
 } finally {
   await server.close();
 }
@@ -80,3 +82,10 @@ const commercialHtml = html
 await mkdir(resolve(root, 'premium-flex-site/comercial'), { recursive: true });
 await writeFile(resolve(root, 'premium-flex-site/comercial/index.html'), commercialHtml);
 await writeFile(resolve(root, 'dist/comercial.html'), commercialHtml);
+
+// Pacote portátil: apenas demonstração local; integração com API fica para a próxima etapa.
+const commercialOfflineHtml = commercialHtml
+  .replace('data-app="comercial"', 'data-app="comercial" data-api="disabled"')
+  .replace(commercialMarkup, () => commercialOfflineMarkup);
+await mkdir(resolve(root, 'dist/premiumflex-comercial'), { recursive: true });
+await writeFile(resolve(root, 'dist/premiumflex-comercial/index.html'), commercialOfflineHtml);

@@ -5,7 +5,7 @@ export const commercialQueries={
  clients:`query CommercialClients($skip:Int!,$take:Int!){empresas(skip:$skip,take:$take,where:{cliente:{eq:true}},order:[{id:ASC}]){${page} items{id apelido ativo crmUltimaLigacaoData crmUltimaVisitaData endereco{municipio{descricao uf{sigla}}} representanteOuVendedor1Preferencial{apelido}}}}`,
  proposals:`query CommercialProposals($skip:Int!,$take:Int!,$where:PropostaDeVendaFilterInput!){propostasDeVenda(skip:$skip,take:$take,where:$where,order:[{id:ASC}]){${page} items{id clienteId emissaoData estado valorTotal}}}`,
  orders:`query CommercialOrders($skip:Int!,$take:Int!,$where:PedidoDeVendaFilterInput!){pedidosDeVenda(skip:$skip,take:$take,where:$where,order:[{id:ASC}]){${page} items{id clienteId emissaoData estado valorFaturado}}}`,
- notes:`query CommercialNotes($skip:Int!,$take:Int!,$where:TarefaOuAnotacaoFilterInput!){tarefasOuAnotacoes(skip:$skip,take:$take,where:$where,order:[{id:ASC}]){${page} items{id empresaId descricao criacaoData criacaoUsuario{apelido}}}}`,
+ notes:`query CommercialNotes($skip:Int!,$take:Int!,$where:TarefaOuAnotacaoFilterInput!){tarefasOuAnotacoes(skip:$skip,take:$take,where:$where,order:[{id:ASC}]){${page} items{id empresaId tipo descricao criacaoData criacaoUsuario{apelido}}}}`,
 };
 export const commercialRoots={clients:'empresas',proposals:'propostasDeVenda',orders:'pedidosDeVenda',notes:'tarefasOuAnotacoes'};
 const day=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}/.test(value)?value.slice(0,10):'';
@@ -31,7 +31,7 @@ export async function commercialData({start,end,companyId},{env=process.env,fetc
   allPages('clients',{},commercialOptions),
   allPages('proposals',{where:{...common,estado:{eq:'EMITIDA'}}},commercialOptions),
   allPages('orders',{where:{...common,estado:{in:['APROVADO','FATURADO','FATURADO_ENTREGA_FUTURA']}}},commercialOptions),
-  allPages('notes',{where:{criacaoData:{gte:start+'T00:00:00-03:00',lt:new Date(Date.parse(end+'T00:00:00-03:00')+86400000).toISOString()},empresa:{cliente:{eq:true}}}},commercialOptions),
+  allPages('notes',{where:{tipo:{eq:'ANOTACAO'},criacaoData:{gte:start+'T00:00:00-03:00',lt:new Date(Date.parse(end+'T00:00:00-03:00')+86400000).toISOString()},empresa:{cliente:{eq:true}}}},commercialOptions),
  ]);
  return {companies,company,range:{start,end},fetchedAt:new Date().toISOString(),clients:normalizeCommercial(clients,proposals,orders,notes),warnings:[
   'Orçamentos: somente propostas EMITIDA, pela emissão no período. Não são todos os pedidos de venda.',

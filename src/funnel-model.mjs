@@ -1,9 +1,9 @@
-/** @typedef {{id:string,kind:'call'|'proposal'|'approved'|'invoice',date:string,amountCents:number,customerId:string|null,representativeId:string,representative:string,orderIds?:string[]}} FunnelEvent */
+/** @typedef {{id:string,kind:'call'|'proposal'|'approved'|'invoice',date:string,amountCents:number,customerId:string|null,representativeId:string,representative:string,orderIds?:string[],callOutcome?:'success'|'failure'|'review',outcomeReason?:string,commentText?:string}} FunnelEvent */
 /** @param {FunnelEvent[]} events @param {boolean} [callsAvailable] */
 export function summarizeFunnel(events,callsAvailable=true){
- const orders=new Set();const leads=new Set();let calls=0,proposals=0,approved=0,invoices=0,revenue=0;
- for(const event of events){if(event.kind==='call'){calls++;if(event.customerId)leads.add(event.customerId);}if(event.kind==='proposal')proposals++;if(event.kind==='approved')approved++;if(event.kind==='invoice'){invoices++;revenue+=event.amountCents;if(!Number.isSafeInteger(revenue))throw new Error('Faturamento acima do limite seguro.');for(const id of event.orderIds||[])orders.add(id);}}
- return {calls:callsAvailable?calls:null,leads:callsAvailable?leads.size:null,proposals,approved,orders:orders.size,invoices,revenue};
+ const orders=new Set();const leads=new Set();let callSuccess=0,callFailure=0,callReview=0;let calls=0,proposals=0,approved=0,invoices=0,revenue=0;
+ for(const event of events){if(event.kind==='call'){calls++;if(event.callOutcome==='success')callSuccess++;else if(event.callOutcome==='failure')callFailure++;else callReview++;if(event.customerId)leads.add(event.customerId);}if(event.kind==='proposal')proposals++;if(event.kind==='approved')approved++;if(event.kind==='invoice'){invoices++;revenue+=event.amountCents;if(!Number.isSafeInteger(revenue))throw new Error('Faturamento acima do limite seguro.');for(const id of event.orderIds||[])orders.add(id);}}
+ return {callSuccess:callsAvailable?callSuccess:null,callFailure:callsAvailable?callFailure:null,callReview:callsAvailable?callReview:null,calls:callsAvailable?calls:null,leads:callsAvailable?leads.size:null,proposals,approved,orders:orders.size,invoices,revenue};
 }
 /** @param {FunnelEvent[]} events @param {boolean} [callsAvailable] */
 export function rankRepresentatives(events,callsAvailable=true){
