@@ -30,3 +30,22 @@ A seleção de empresa é validada na lista de minhas empresas disponibilizada p
 No modo conectado, o cliente e os valores reais ficam somente em memória. Não são gravados no localStorage, nem misturados com a demonstração. Comentários são somente leitura; roteiros duram a sessão. Falhas de atualização são exibidas e não acionam retorno automático à demonstração.
 
 O novo endpoint foi validado contra o esquema GraphQL fornecido e por testes com respostas simuladas. A validação autenticada real depende da publicação das funções e do acesso do usuário pela senha existente. Não pedir a chave no chat. Esta implementação não foi publicada automaticamente.
+
+## Funil de vendas
+
+A aba Funil de vendas fica imediatamente após Roteiros. Oferece filtros por ano, mês, dia específico e representante; ranking por faturamento com desempates; exportação CSV; gráfico diário alternando atividades/faturamento; e gráfico mensal de faturamento no ano consultado. O gráfico mensal mantém o ano e o representante como contexto, mesmo ao filtrar um dia ou mês. O gráfico diário e o ranking acompanham o período selecionado.
+
+Metas iniciais da equipe: 30 ligações/dia e R$ 200.000,00/mês. A aba permite editar as metas, guardadas localmente por empresa. Ao filtrar um representante, a comparação aplica a mesma meta a ele. A referência diária é o dia selecionado; sem dia, usa hoje no mês atual ou o último dia do mês histórico. A meta mensal considera o acumulado do mês de referência, sem restringi-lo ao filtro de dia. O avanço percentual pode exceder 100%, enquanto a barra visual fica limitada a 100%.
+
+O endpoint protegido `GET /api/commercial-funnel?company=ID&start=AAAA-MM-DD&end=AAAA-MM-DD&callSubject=ID` é independente do resumo anterior. Todas as coleções usam consultas fixas, paginação consistente e prazo compartilhado de 24 segundos. Limite de 10 mil registros por coleção; um erro ou truncamento interrompe os totais do funil, sem fallback para dados demonstrativos.
+
+- Ligações: tarefas `FINALIZADA`, do tipo `TAREFA`, identificadas por um assunto do CRM escolhido na tela. A data é a conclusão, convertida para America/Sao_Paulo. Uma tarefa conta uma ligação; leads únicos são contados separadamente. O assunto é selecionado entre os assuntos observados nas tarefas concluídas no ano. A seleção, sem dados de clientes, fica neste navegador por empresa. `MAXIPROD_CALL_SUBJECT_ID` é um valor opcional no servidor para fornecer o assunto padrão; não é segredo. Sem assunto selecionado/configurado, ligações e leads ficam indisponíveis, não zerados.
+- Propostas enviadas: propostas `EMITIDA` e `CONCLUIDA` pela emissão. O esquema não comprova o envio por e-mail; essa limitação aparece na aba. Rascunhos e canceladas ficam fora.
+- Pedidos aprovados: `aprovacaoData` dos pedidos atualmente `APROVADO`, `FATURADO` ou `FATURADO_ENTREGA_FUTURA`. Não usa emissão do pedido como aproximação da aprovação.
+- Pedidos faturados: pedidos distintos associados aos itens das notas `EMITIDA` com operação fiscal `FATURAMENTO`, pela emissão da NF. Várias notas parciais não duplicam o pedido dentro do mesmo período. As contagens diárias podem somar mais que a contagem mensal por representarem pedidos únicos em períodos diferentes.
+- Faturamento: `valorTotal` dessas notas, incluindo frete e impostos. Notas sem pedido vinculado entram no valor, mas não na contagem de pedidos. Não deduz devoluções; validar cobertura fiscal com a contabilidade antes de usar para decisões.
+- Representantes: propostas, pedidos e notas usam o primeiro representante do documento. Ligações usam a empresa representante vinculada ao usuário responsável do CRM; usuários sem vínculo ficam separados. Cadastros de CRM podem ser compartilhados entre empresas permitidas pela chave.
+
+As etapas mostram eventos ocorridos no período, sem afirmar conversão de uma mesma coorte. Leads e pedidos são deduplicados no total geral e em cada representante; registros compartilhados podem aparecer em mais de uma linha, por isso o total não é a soma simples de contagens distintas.
+
+Testes adicionais: `tests/funnel.test.mjs` e `npm run test:e2e -- funnel.spec.ts`. A API real depende da publicação e da sessão autenticada existente. A demonstração do funil é gerada separadamente e identificada como fictícia.
