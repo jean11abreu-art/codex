@@ -56,3 +56,7 @@ Testes adicionais: `tests/funnel.test.mjs` e `npm run test:e2e -- funnel.spec.ts
 O usuário pediu publicação na hospedagem do ChatGPT e adiou a conexão real por API. O build prepara `dist/premiumflex-comercial/index.html`, com CSS e JavaScript incorporados, identificação de demonstração e `data-api="disabled"`. Nessa variante, a interface de conexão à API não é exibida e não há consultas automáticas. Ela mantém a navegação, comentários locais, avaliação do resultado, funil, metas, gráficos, roteiros e CSV. O pacote usa dados fictícios de clientes e vendas; comentários e revisões permanecem no navegador e não são compartilhados entre usuários.
 
 O ambiente atual não oferece ferramenta ou skill para publicar um site na hospedagem do ChatGPT. Um link de compartilhamento da conversa não é hospedagem do aplicativo. Nenhuma publicação alternativa foi feita sem autorização para o destino. O código de integração existente está preservado para a próxima etapa; as consultas comerciais reais não foram executadas nesta etapa.
+
+## Ativação da API no site
+
+A página publicada em `/comercial/` habilita Conectar Maxiprod. O pacote portátil continua sem API. O diagnóstico público confirmou configuração das credenciais no Netlify; a leitura real requer a senha existente, informada pelo usuário diretamente no site. O navegador não recebe a chave. O acesso é somente leitura. Configuração presente não comprova validade da chave nem permissões comerciais.

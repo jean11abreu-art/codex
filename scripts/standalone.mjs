@@ -90,6 +90,6 @@ const commercialOfflineHtml = commercialHtml
 await mkdir(resolve(root, 'dist/premiumflex-comercial'), { recursive: true });
 await writeFile(resolve(root, 'dist/premiumflex-comercial/index.html'), commercialOfflineHtml);
 
-// Publicação desta etapa sem conexão à API.
-await writeFile(resolve(root, 'premium-flex-site/comercial/index.html'), commercialOfflineHtml);
-await writeFile(resolve(root, 'dist/comercial.html'), commercialOfflineHtml);
+// Site publicado com conexão protegida à API; pacote portátil permanece sem API.
+await writeFile(resolve(root, 'premium-flex-site/comercial/index.html'), commercialHtml);
+await writeFile(resolve(root, 'dist/comercial.html'), commercialHtml);
