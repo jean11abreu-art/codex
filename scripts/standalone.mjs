@@ -35,11 +35,14 @@ const server = await createServer({
   appType: 'custom',
 });
 let markup;
+let financialMarkup;
 let commercialMarkup;
 let commercialOfflineMarkup;
 try {
   const { default: App } = await server.ssrLoadModule('/src/HoseApp.tsx');
   markup = renderToString(createElement(App));
+  const { default: FinancialPortal } = await server.ssrLoadModule('/src/Portal.tsx');
+  financialMarkup = renderToString(createElement(FinancialPortal));
   const { default: CommercialPortal } = await server.ssrLoadModule('/src/CommercialPortal.tsx');
   commercialMarkup = renderToString(createElement(CommercialPortal));
   commercialOfflineMarkup = renderToString(createElement(CommercialPortal, {apiEnabled:false}));
@@ -93,3 +96,12 @@ await writeFile(resolve(root, 'dist/premiumflex-comercial/index.html'), commerci
 // Site publicado com conexão protegida à API; pacote portátil permanece sem API.
 await writeFile(resolve(root, 'premium-flex-site/comercial/index.html'), commercialHtml);
 await writeFile(resolve(root, 'dist/comercial.html'), commercialHtml);
+
+// Página financeira própria para acesso direto no Netlify.
+const financialHtml = html
+  .replace('<html lang="pt-BR">', '<html lang="pt-BR" data-app="financeiro">')
+  .replace('<title>Premium Plus — Montagem de mangueiras</title>', '<title>Premiumflex — Painel financeiro</title>')
+  .replace('Ordens de montagem de mangueiras hidráulicas Premium Plus.', 'Painel financeiro Premiumflex com conexão protegida ao Maxiprod.')
+  .replace(markup, () => financialMarkup);
+await mkdir(resolve(root, 'premium-flex-site/financeiro'), {recursive:true});
+await writeFile(resolve(root, 'premium-flex-site/financeiro/index.html'), financialHtml);
