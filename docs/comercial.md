@@ -64,3 +64,8 @@ A página publicada em `/comercial/` habilita Conectar Maxiprod. O pacote portá
 ## Cadastros vinculados sem marcação de cliente
 
 A consulta inicial mantém o filtro de clientes. Propostas e pedidos podem referenciar cadastros que não possuem mais essa marcação. Os IDs ausentes são consultados em lotes de até 100, pelo mesmo endpoint autorizado, com paginação e prazo compartilhado. Cadastros realmente inacessíveis continuam interrompendo os totais; documentos não são descartados para ocultar divergências.
+
+
+## Classificação comercial e visual preto
+
+Consulta de classificação independente dos totais do período: de 1º de janeiro até hoje, com notas dos últimos 60 dias também cobertas na virada do ano. Quente tem pedido atualmente APROVADO (pela aprovação no ano) ou NF EMITIDA de FATURAMENTO há até 60 dias. Sem essa evidência, proposta EMITIDA no ano indica Morno (aproximação de negociação disponível no esquema); demais são Frios. A classificação não usa data de comentário nem situação cadastral como prova de compra. Ativos/inativos continuam indicando o cadastro. As abas de clientes possuem filtro de temperatura e informam a regra; o período inicial da conexão passa a começar em janeiro. O fundo externo é preto, mantendo cartões claros para contraste.

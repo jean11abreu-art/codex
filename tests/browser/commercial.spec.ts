@@ -52,3 +52,11 @@ test('dados reais de teste não são persistidos no armazenamento demonstrativo'
  await page.getByRole('button',{name:'Adicionar ao roteiro'}).click();
  expect(await page.evaluate(()=>localStorage.getItem('premiumflex-commercial-demo-v1'))).toBeNull();
 });
+
+test('clientes ativos filtram a classificação comercial e usam fundo preto',async({page})=>{
+ await page.goto('/comercial');await page.getByRole('button',{name:'Clientes ativos',exact:true}).click();
+ await expect(page.locator('.pc-app')).toHaveCSS('background-color','rgb(5, 5, 5)');
+ const filters=page.getByLabel('Filtrar classificação dos clientes');
+ await filters.getByRole('button',{name:'Quente',exact:true}).click();await expect(page.locator('.pc-actions-grid article')).toHaveCount(3);
+ await filters.getByRole('button',{name:'Morno',exact:true}).click();await expect(page.locator('.pc-actions-grid article')).toHaveCount(3);
+});

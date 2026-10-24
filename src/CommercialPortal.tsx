@@ -3,7 +3,7 @@ import { X, LockKeyhole, ArrowRight } from 'lucide-react';
 import CommercialApp, {type CommercialLive} from './CommercialApp';
 import { PremiumFlexLogo } from './Brand';
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date());
-const yearAgo=()=>{const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-365);return d.toISOString().slice(0,10);};
+const yearAgo=()=>today().slice(0,4)+'-01-01';
 async function responseJSON(response:Response){let body;try{body=await response.json();}catch{throw new Error('A API não está disponível neste endereço. Execute as funções no Netlify para conectar os dados reais.');}if(!response.ok)throw new Error(body.error||'Não foi possível concluir a consulta.');return body;}
 export default function CommercialPortal({apiEnabled=true}:{apiEnabled?:boolean}={}){
  const [live,setLive]=useState<CommercialLive>();const [dialog,setDialog]=useState(false);const [password,setPassword]=useState('');
