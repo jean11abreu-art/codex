@@ -60,3 +60,7 @@ O ambiente atual não oferece ferramenta ou skill para publicar um site na hospe
 ## Ativação da API no site
 
 A página publicada em `/comercial/` habilita Conectar Maxiprod. O pacote portátil continua sem API. O diagnóstico público confirmou configuração das credenciais no Netlify; a leitura real requer a senha existente, informada pelo usuário diretamente no site. O navegador não recebe a chave. O acesso é somente leitura. Configuração presente não comprova validade da chave nem permissões comerciais.
+
+## Cadastros vinculados sem marcação de cliente
+
+A consulta inicial mantém o filtro de clientes. Propostas e pedidos podem referenciar cadastros que não possuem mais essa marcação. Os IDs ausentes são consultados em lotes de até 100, pelo mesmo endpoint autorizado, com paginação e prazo compartilhado. Cadastros realmente inacessíveis continuam interrompendo os totais; documentos não são descartados para ocultar divergências.

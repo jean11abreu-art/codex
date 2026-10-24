@@ -2,12 +2,13 @@ import { allPages, cents, id, safeSum, validateRange } from './maxiprod.mjs';
 import { PublicError } from './http.mjs';
 const page='pageInfo { hasNextPage } totalCount';
 export const commercialQueries={
+ linkedClients:`query CommercialLinkedClients($skip:Int!,$take:Int!,$where:EmpresaFilterInput!){empresas(skip:$skip,take:$take,where:$where,order:[{id:ASC}]){${page} items{id apelido ativo crmUltimaLigacaoData crmUltimaVisitaData endereco{municipio{descricao uf{sigla}}} representanteOuVendedor1Preferencial{apelido}}}}`,
  clients:`query CommercialClients($skip:Int!,$take:Int!){empresas(skip:$skip,take:$take,where:{cliente:{eq:true}},order:[{id:ASC}]){${page} items{id apelido ativo crmUltimaLigacaoData crmUltimaVisitaData endereco{municipio{descricao uf{sigla}}} representanteOuVendedor1Preferencial{apelido}}}}`,
  proposals:`query CommercialProposals($skip:Int!,$take:Int!,$where:PropostaDeVendaFilterInput!){propostasDeVenda(skip:$skip,take:$take,where:$where,order:[{id:ASC}]){${page} items{id clienteId emissaoData estado valorTotal}}}`,
  orders:`query CommercialOrders($skip:Int!,$take:Int!,$where:PedidoDeVendaFilterInput!){pedidosDeVenda(skip:$skip,take:$take,where:$where,order:[{id:ASC}]){${page} items{id clienteId emissaoData estado valorFaturado}}}`,
  notes:`query CommercialNotes($skip:Int!,$take:Int!,$where:TarefaOuAnotacaoFilterInput!){tarefasOuAnotacoes(skip:$skip,take:$take,where:$where,order:[{id:ASC}]){${page} items{id empresaId tipo descricao criacaoData criacaoUsuario{apelido}}}}`,
 };
-export const commercialRoots={clients:'empresas',proposals:'propostasDeVenda',orders:'pedidosDeVenda',notes:'tarefasOuAnotacoes'};
+export const commercialRoots={linkedClients:'empresas',clients:'empresas',proposals:'propostasDeVenda',orders:'pedidosDeVenda',notes:'tarefasOuAnotacoes'};
 const day=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}/.test(value)?value.slice(0,10):'';
 export function normalizeCommercial(clientRows,proposals,orders,notes){
  const clients=new Map(clientRows.map(row=>{const city=row.endereco?.municipio;return [id(row.id),{id:id(row.id),name:row.apelido||'Cliente sem nome',city:city?`${city.descricao}, ${city.uf?.sigla||''}`:'Cidade não informada',representative:row.representanteOuVendedor1Preferencial?.apelido||'Sem representante',active:row.ativo===true,quotes:0,quoted:0,invoices:0,invoiced:0,last:[day(row.crmUltimaLigacaoData),day(row.crmUltimaVisitaData)].sort().at(-1)||'',comments:[]}];}));
@@ -33,6 +34,14 @@ export async function commercialData({start,end,companyId},{env=process.env,fetc
   allPages('orders',{where:{...common,estado:{in:['APROVADO','FATURADO','FATURADO_ENTREGA_FUTURA']}}},commercialOptions),
   allPages('notes',{where:{tipo:{eq:'ANOTACAO'},criacaoData:{gte:start+'T00:00:00-03:00',lt:new Date(Date.parse(end+'T00:00:00-03:00')+86400000).toISOString()},empresa:{cliente:{eq:true}}}},commercialOptions),
  ]);
+ // Um cadastro pode perder a marcação "cliente" e continuar vinculado a documentos.
+ // Recupera apenas os IDs referenciados, mantendo a autorização da API e os mesmos limites.
+ const known=new Set(clients.map(row=>id(row.id)));
+ const missing=[...new Set([...proposals,...orders].map(row=>id(row.clienteId)))].filter(value=>!known.has(value));
+ for(let offset=0;offset<missing.length;offset+=100){
+  const linked=await allPages('linkedClients',{where:{id:{in:missing.slice(offset,offset+100).map(Number)}}},commercialOptions);
+  for(const row of linked){const value=id(row.id);if(!known.has(value)){clients.push(row);known.add(value);}}
+ }
  return {companies,company,range:{start,end},fetchedAt:new Date().toISOString(),clients:normalizeCommercial(clients,proposals,orders,notes),warnings:[
   'Orçamentos: somente propostas EMITIDA, pela emissão no período. Não são todos os pedidos de venda.',
   'Faturado: valorFaturado dos pedidos APROVADO, FATURADO e FATURADO_ENTREGA_FUTURA emitidos no período; inclui faturamento parcial. A contagem é de pedidos com faturamento, não de notas fiscais. Não representa faturamento por data da NF.',
